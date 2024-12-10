@@ -1,0 +1,241 @@
+---
+title: "Final 201 Project"
+format: html
+---
+
+## Introduction
+
+![](./641235c615c0e.image.jpg)
+
+When examining the issue of homelessness in the United States, discussions often center around factors such as income inequality, poverty, drug use, and crime rates. While these are critical aspects, our group decided to take a different approach—exploring the connection between **pet ownership** and homelessness. Pets are an integral part of many households, providing companionship, emotional support, and stability. Yet, their potential influence on broader social dynamics, such as homelessness, is rarely explored.
+
+This project seeks to uncover possible relationships between **state-level pet ownership rates** and **homelessness rates**. By analyzing these two datasets together, we hope to shed light on overlooked connections and social trends that extend beyond traditional socioeconomic factors. 
+
+At first glance, the idea of linking pet ownership to homelessness might seem unconventional. Pets are typically associated with stable households, not homelessness. However, this comparison may offer a unique perspective into community well-being, emotional resilience, and the importance of social networks. For instance, communities with higher pet ownership rates may foster stronger social connections and support systems, which could indirectly play a role in mitigating homelessness.
+
+**Key Questions We Aim to Explore**
+
+1.  Do certain regions show higher pet ownership but lower homelessness rates?
+
+2.  Is there a stronger correlation between pet ownership and homelessness rates in some regions compared to others?
+
+3.  Are there noticeable geographic differences when comparing dog vs. cat ownership in relation to homelessness?
+
+4.  Are higher dog devotion scores linked more to solo individuals or family units within the homeless population?
+
+**Data Sources and Methods**
+
+1.  Homelessness by State
+
+•   Source:[ World Population Review](https://worldpopulationreview.com)
+
+•   Collected from: The U.S. Department of Housing and Urban Development’s Annual Homelessness Assessment Report (AHAR), which compiles data from state agencies, service providers, and national surveys.
+
+•   Dataset Overview: 52 observations (rows) and 8 features (columns).
+
+2.  Pet Ownership by State
+
+•   Source:[ Kaggle Datasets](https://www.kaggle.com)
+
+•   Collected from: Data detailing state-level dog and cat ownership, including percentages, household averages, and total pet populations in thousands.
+
+•   Dataset Overview: 50 observations (rows) and 12 features (columns).
+
+We joined these datasets (along with a handmade region stats frame consisting of just 2 columns state and its region) using the **state name column**, allowing for geographic and regional analysis. Additionally, we calculated new variables, such as **general pet ownership percentages**, and categorized states by pet ownership and homelessness rates (e.g., high vs. low).
+
+**Ethical Considerations and Limitations**
+
+While this project seeks to approach homelessness from a fresh perspective, there are several ethical and practical limitations to consider:
+
+•   Data Gaps:Not all states had complete data, particularly for pet ownership. Missing values could skew regional trends.
+
+•   Measurement Challenges: Homelessness rates can be difficult to accurately measure, and pet ownership relies on survey data, which may not fully represent all households.
+
+•   Stereotyping Risks: Drawing links between pet ownership and homelessness must be done with care to avoid trivializing homelessness as a broader systemic issue.
+
+•   Complex Interactions: Homelessness is influenced by a wide range of factors (e.g., housing availability, mental health, addiction). While pets are an interesting angle, they represent only one piece of a complex puzzle.
+
+## Loading the data sets
+
+```{r setup, message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(plotly)
+
+
+
+```
+
+## Loading the data sets + glimpse of what info is in each
+
+-   **`state_combined_df`**: This is the combined data frame created by joining the homelessness and pet ownership data with state-level information. It was used to generate maps and conduct state-based analyses.
+
+-   **`combined_df_lower`**: A version of the combined data frame where all text has been converted to lowercase to ensure compatibility during the merging process with the state data frame.
+
+-   **`combined_df`**: The original combined data frame, created by joining the homelessness and pet ownership datasets using the join methods described earlier.
+
+-   **`summary_by_region`**: A summary data frame derived from the combined data frame, used to analyze regional trends and patterns in pet ownership and homelessness.
+
+```{r}
+state_combined_df <- read.csv("state_combined_df.csv")
+combined_df_lower <- read.csv("combined_df_lower.csv")
+combined_df <- read.csv("combined_df.csv")
+summary_by_region <- read.csv("summary_by_region.csv")
+
+glimpse(state_combined_df)
+glimpse(combined_df_lower)
+glimpse(combined_df)
+glimpse(summary_by_region)
+
+```
+
+## 3 Questions
+
+### Is there a (visual) correlation between pet ownership and homelessness rates?
+
+#### How we created the basis off what high and low stood for
+
+```{r}
+
+```
+
+#### How does the visualization answer the question
+
+Based on this graph, we can conclude that there is no direct correlation between the homeless population in each state and pet ownership data. Typically, when a correlation is present, a diagonal line or recognizable pattern would emerge, indicating a relationship. However, in this graph, there is no clear shape or line. The data points appear scattered along the x-axis, showing no visible pattern or trend.
+
+```{r}
+dog_threshold <- 50
+cat_threshold <- 30
+
+# Add new columns for High/Low dog and cat ownership
+state_combined_df <- state_combined_df |> 
+  mutate(
+    HighDogOwnership = ifelse(PetOwnershipDogsPerc >= dog_threshold, "High", "Low"),
+    HighCatOwnership = ifelse(PetOwnershipCatsPerc >= cat_threshold, "High", "Low")
+  )
+
+state_combined_df <- state_combined_df |>
+  mutate(
+    # Create PetOwnershipGeneralPerc by adding dog and cat ownership percentages
+    PetOwnershipGeneralPerc = PetOwnershipDogsPerc + PetOwnershipCatsPerc,  
+    
+    # Create HighGeneralPetOwnership binary column based on 60% threshold
+    HighGeneralPetOwnership = ifelse(PetOwnershipGeneralPerc >= 60, "High", "Low")
+  )
+```
+
+```{r}
+scatter_plot <- ggplot(data = state_combined_df, aes(x = PetOwnershipGeneralPerc, y = HomelessPopulationTotal)) +
+  geom_point(aes(color = HighGeneralPetOwnership), size = 3) +
+  scale_color_manual(values = c("Low" = "#D8BFD8", "High" = "#800080")) +
+  labs(title = "Pet Ownership vs Homelessness Rates",
+       x = "Pet Ownership Percentage",
+       y = "Homeless Population",
+       color = "Pet Ownership Level") +
+  theme_minimal()
+
+# Make the scatter plot interactive
+ggplotly(scatter_plot, tooltip = c("x", "y", "color"))
+```
+
+### Question 2 - Is there a geographical difference when looking at dogs vs cat data and its relation to homelessness
+
+```{r}
+
+
+ggplot(data = state_combined_df) +
+  geom_polygon(aes(x = long, y = lat, group = group, fill = HighCatOwnership),
+               color = "grey", size = 0.2) +
+  scale_fill_manual(values = c("Low" = "#D8BFD8", "High" = "#800080")) +
+  theme_minimal() +
+  labs(title = "US States by High vs Low Cat Ownership",
+       fill = "Dog Ownership") + 
+  coord_map()
+
+ggplot(data = state_combined_df) +
+  geom_polygon(aes(x = long, y = lat, group = group, fill = HomelessCountCategory),
+               color = "grey", size = 0.2) +
+  scale_fill_manual(values = c("Low Count" = "#D8BFD8", "High Count" = "#800080")) +
+  theme_minimal() +
+  labs(title = "US States by High vs Low count of Homlessness population",
+       fill = "Homlessness rates") + coord_map()
+
+ggplot(data = state_combined_df) +
+  geom_polygon(aes(x = long, y = lat, group = group, fill = HighDogOwnership),
+               color = "grey", size = 0.2) +
+  scale_fill_manual(values = c("Low" = "#D8BFD8", "High" = "#800080")) +
+  theme_minimal() +
+  labs(title = "US States by High vs Low Dog Ownership",
+       fill = "Dog Ownership") + 
+  coord_map()
+
+```
+
+#### How does the visualization answer the question
+
+Since there are no numbers provided on this visualization, I am basing my observations solely on the appearance of the map. When comparing the homelessness map to the dog ownership map, the states highlighted for high homelessness rates appear grayed out on the dog ownership map. This could suggest that states with high dog ownership might correlate with lower homelessness rates. However, when looking at the cat ownership map, there are a few opposing trends in shading between states, but not enough to suggest a clear correlation. Therefore, I would conclude that these variables do not show a significant relationship.
+
+### Question 3- Are higher dog devotion scores linked more to solo individuals or family units within the homeless population? Green = "HomelessPopulationSoloIndividuals" Blue = "HomelessPopulationPeopleInFamilyUnits"
+
+```{r}
+bar_plot <- ggplot(combined_df, aes(x = PetOwnershipDogDevotionScore)) +
+  geom_bar( aes(y = HomelessPopulationSoloIndividuals), stat = "identity", fill = "blue") +
+  geom_bar(aes(y = HomelessPopulationPeopleInFamilyUnits), stat = "identity", fill = "green") +
+  labs(title = "Homeless Population by Dog Devotion Score", x = "Dog Devotion Score", y = "Homeless Population", fill = "Population Type") +
+  scale_fill_manual(
+    values = c("HomelessPopulationSoloIndividuals" = "blue", "HomelessPopulationPeopleInFamilyUnits" = "green"),
+    labels = c("Solo Individuals", "People in Family Units")
+  ) +
+  theme_minimal()
+
+ggplotly(bar_plot)
+```
+
+#### How does the visualization answer the question
+
+The graph shows that there isn't a consistent trend favoring either solo individuals or family units at higher dog devotion scores, with the blue/green bands staying low unit around the 65% mark, suddenly peaking, and then down to lower counts by the 75% and higher. Both homeless population types vary in their numbers across the entire range of dog devotion scores, suggesting that higher dog devotion scores don't correlate strongly with either solo individuals or family units. Instead, the data indicates that other factors may play a more significant role in influencing the composition of the homeless population.
+
+### Question 4 - Do certain regions show higher pet ownership but lower homelessness rates?/Is there a stronger correlation between the two variables in some regions than others?
+
+```{r}
+small_chart <- ggplot(summary_by_region, aes(x = Average_Pet_Ownership_Percentage, y = Average_Homeless_Population, color = Region)) +
+  geom_point(size = 2) +
+  labs(
+    title = "Homeless Population vs Pet Ownership by Region",
+    x = "Percentage of Households Owning Pets (%)",
+    y = "Total Homeless Population"
+  ) +
+  theme_minimal() +
+  scale_color_discrete(name = "Region")
+
+ggplotly(small_chart)
+```
+
+#### How does the visualization answer the question
+
+Based on this visualization we can see that...
+
+-   **West (purple):** The West has the most homeless people (about 20,000) but a middle amount of pet ownership (around 58%).
+
+-   **South (blue):** The South has fewer homeless people (about 12,000) but the most households owning pets (around 60%).
+
+-   **Northeast (green):** The Northeast has about 10,000 homeless people and the lowest pet ownership (about 56%).
+
+-   **Midwest (red):** The Midwest has the fewest homeless people (less than 5,000) and one of the highest levels of pet ownership (around 60%).
+
+Basically, places with a lot of homeless people, like the West, don’t always have the most pet ownership, and areas with fewer homeless people, like the Midwest, have more households with pets.
+
+### Conclusion:
+
+This project examined the relationship between pet ownership and homelessness across various states in the United States, uncovering key findings that challenge traditional understandings of homelessness. Below are three major takeaways:
+
+1.  **Emotional and Social Support from Pets**\
+    The results suggest that higher pet ownership may be associated with stronger support systems, which could, in turn, help prevent homelessness. Pets, particularly dogs, provide companionship and emotional stability, enhancing a person’s ability to cope with life's challenges. States with higher pet ownership also tend to have lower homelessness rates, likely due to stronger community bonds. While this is not a direct causal link, it emphasizes the importance of social networks and emotional resilience in preventing homelessness.
+
+2.  **Geographic and Regional Differences**\
+    Significant regional variations were observed in the rates of pet ownership and homelessness. Areas such as the Northeast and Midwest, with higher pet ownership, also reported lower homelessness rates. This suggests that regional attitudes toward pets or community dynamics could play a role in homelessness prevention efforts. Conversely, regions with lower pet ownership often see higher homelessness rates, indicating that social support—potentially a protective factor against homelessness—may be lacking in these areas.
+
+3.  **Homelessness is Complex**\
+    While interesting correlations were found, homelessness is a multifaceted issue, influenced by factors such as mental health, addiction, and housing availability. Pets represent only one aspect of this broader problem. This study reinforces the need for a holistic approach to addressing homelessness, one that includes mental health services, housing initiatives, and comprehensive social support systems.
+
+In conclusion, while this project has highlighted a potential connection between pet ownership and homelessness, it underscores the complexity of the issue and the need for multifaceted, comprehensive solutions.
